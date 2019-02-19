@@ -1,0 +1,274 @@
+diff -Naur v2.10.1rc3-orig/tools/Makefile.spec v2.10.1rc3/tools/Makefile.spec
+--- v2.10.1rc3-orig/tools/Makefile.spec	2019-02-19 21:55:37.000000000 +0200
++++ v2.10.1rc3/tools/Makefile.spec	2019-02-19 22:13:43.000000000 +0200
+@@ -38,13 +38,15 @@
+ ################
+ ## TARGET OS HERE
+ ################
+-# OS Values: AIX, LINUX, SOLARIS, NCR, HPUX
+-OS	=	LINUX
++# OS Values: AIX, LINUX, SOLARIS, NCR, HPUX, OSX
++OS	=	OSX
+ ###########
+ # No changes should be necessary below this point
+ # Each compile variable is adjusted for the target platform using the OS setting above
+ ###########
+ # CC
++
++OSX_CC		= gcc
+ AIX_CC		= xlC
+ HPUX_CC		= gcc
+ LINUX_CC		= gcc
+@@ -53,6 +55,7 @@
+ SOL86_CC	= cc
+ CC		= $($(OS)_CC)
+ # CFLAGS
++OSX_CFLAGS 	= 
+ AIX_CFLAGS		= -q64 -O3 -D_LARGE_FILES
+ HPUX_CFLAGS		= -O3 -Wall
+ LINUX_CFLAGS	= -g -Wall
+@@ -76,11 +79,13 @@
+ NCR_LEX		= lex
+ SOLARIS_LEX	= lex
+ SOL86_LEX	= lex
++OSX_LEX		= lex
+ LEX		= $($(OS)_LEX)
+ # LIBS
+ AIX_LIBS	= -lm
+ HPUX_LIBS	= -lm -ll
+ LINUX_LIBS	= -lm
++OSX_LIBS	= -lm
+ NCR_LIBS	= -lm -lc89
+ SOLARIS_LIBS	= -ly -ll -lm
+ SOL86_LIBS	= -ly -ll -lm
+@@ -92,11 +97,13 @@
+ NCR_YACC	= yacc
+ SOLARIS_YACC	= yacc
+ SOL86_YACC	= yacc
++OSX_YACC	= yacc
+ YACC		= $($(OS)_YACC)
+ # YFLAGS
+ AIX_YFLAGS	= -d -v
+ HPUX_YFLAGS	= -y -d -v
+ LINUX_YFLAGS	= -d -v
++OSX_YFLAGS	= -d -v
+ NCR_YFLAGS	= -d -v
+ SOLARIS_YFLAGS	= -d -v
+ SOL86_YFLAGS	= -d -v
+diff -Naur v2.10.1rc3-orig/tools/config.h v2.10.1rc3/tools/config.h
+--- v2.10.1rc3-orig/tools/config.h	2019-02-19 21:55:37.000000000 +0200
++++ v2.10.1rc3/tools/config.h	2019-02-19 22:10:49.000000000 +0200
+@@ -149,6 +149,23 @@
+ #define HUGE_FORMAT "%I64d"
+ #endif /* WIN32 */
+ 
++#ifdef OSX
++#define _ALL_SOURCE
++#define USE_STRING_H
++#define USE_LIMITS_H
++#define USE_STDLIB_H
++#define SUPPORT_64BITS
++#define HUGE_TYPE long long
++#define HUGE_COUNT	1
++#define HUGE_FORMAT	"%lld"
++#define _POSIX_SOURCE
++//#define STDLIB_HAS_GETOPT
++//#define USE_STDLIB_H
++#define FLEX
++#endif /* OSX */
++
++
++
+ #ifndef PATH_SEP
+ #define PATH_SEP '/'
+ #endif /* PATH_SEP */
+diff -Naur v2.10.1rc3-orig/tools/date.c v2.10.1rc3/tools/date.c
+--- v2.10.1rc3-orig/tools/date.c	2019-02-19 21:55:37.000000000 +0200
++++ v2.10.1rc3/tools/date.c	2019-02-19 22:11:16.000000000 +0200
+@@ -36,9 +36,11 @@
+ 
+ /*** includes ***/
+ #include <stdlib.h>
++#ifndef OSX
+ #ifndef USE_STDLIB_H
+ #include <malloc.h>
+ #endif
++#endif
+ #include <stdio.h>
+ #include <math.h>
+ #include "config.h"
+diff -Naur v2.10.1rc3-orig/tools/dist.c v2.10.1rc3/tools/dist.c
+--- v2.10.1rc3-orig/tools/dist.c	2019-02-19 21:55:37.000000000 +0200
++++ v2.10.1rc3/tools/dist.c	2019-02-19 22:05:02.000000000 +0200
+@@ -38,7 +38,9 @@
+ #include <stdio.h>
+ #include <fcntl.h>
+ #include <assert.h>
++#ifndef USE_STDLIB_H
+ #include <malloc.h>
++#endif
+ #ifdef WIN32
+ #include <io.h>
+ #include <stdlib.h>
+diff -Naur v2.10.1rc3-orig/tools/driver.c v2.10.1rc3/tools/driver.c
+--- v2.10.1rc3-orig/tools/driver.c	2019-02-19 21:55:37.000000000 +0200
++++ v2.10.1rc3/tools/driver.c	2019-02-19 22:11:48.000000000 +0200
+@@ -69,6 +69,10 @@
+ #include "address.h" /* for access to resetCountyCount() */
+ #include "scd.h"
+ 
++#ifdef OSX
++#define MAXINT INT_MAX
++#endif
++
+ 
+ extern int optind, opterr;
+ extern char *optarg;
+diff -Naur v2.10.1rc3-orig/tools/genrand.c v2.10.1rc3/tools/genrand.c
+--- v2.10.1rc3-orig/tools/genrand.c	2019-02-19 21:55:37.000000000 +0200
++++ v2.10.1rc3/tools/genrand.c	2019-02-19 22:07:37.000000000 +0200
+@@ -54,6 +54,8 @@
+ #include "tables.h"
+ #include "streams.h"
+ 
++#define MAXINT INT_MAX
++
+ static long Mult = 16807;       /* the multiplier */
+ static long nQ = 127773;        /* the quotient MAXINT / Mult */
+ static long nR = 2836;          /* the remainder MAXINT % Mult */
+diff -Naur v2.10.1rc3-orig/tools/misc.c v2.10.1rc3/tools/misc.c
+--- v2.10.1rc3-orig/tools/misc.c	2019-02-19 21:55:37.000000000 +0200
++++ v2.10.1rc3/tools/misc.c	2019-02-19 22:09:00.000000000 +0200
+@@ -41,6 +41,9 @@
+ #include <errno.h>
+ #include <ctype.h>
+ #include <math.h>
++#ifdef OSX
++#include <stdlib.h>
++#endif
+ #ifndef _POSIX_SOURCE
+ #include <malloc.h>
+ #endif /* POSIX_SOURCE */
+diff -Naur v2.10.1rc3-orig/tools/nulls.c v2.10.1rc3/tools/nulls.c
+--- v2.10.1rc3-orig/tools/nulls.c	2019-02-19 21:55:37.000000000 +0200
++++ v2.10.1rc3/tools/nulls.c	2019-02-19 22:12:09.000000000 +0200
+@@ -39,6 +39,10 @@
+ #include "genrand.h"
+ #include "tdefs.h"
+ 
++#ifdef OSX
++#define MAXINT INT_MAX
++#endif
++
+ /*
+ * Routine: nullCheck(int nColumn)
+ * Purpose: 
+diff -Naur v2.10.1rc3-orig/tools/porting.h v2.10.1rc3/tools/porting.h
+--- v2.10.1rc3-orig/tools/porting.h	2019-02-19 21:55:37.000000000 +0200
++++ v2.10.1rc3/tools/porting.h	2019-02-19 21:57:36.000000000 +0200
+@@ -44,6 +44,7 @@
+ 
+ #ifdef USE_VALUES_H
+ #include <values.h>
++//#include <limits.h>
+ #endif
+ 
+ #ifdef USE_LIMITS_H
+diff -Naur v2.10.1rc3-orig/tools/tables.h v2.10.1rc3/tools/tables.h
+--- v2.10.1rc3-orig/tools/tables.h	1970-01-01 02:00:00.000000000 +0200
++++ v2.10.1rc3/tools/tables.h	2019-02-19 22:29:28.000000000 +0200
+@@ -0,0 +1,81 @@
++/*
++ * THIS IS A GENERATED FILE
++ * SEE COLUMNS.LIST
++*/
++#ifndef TABLES_H
++#define TABLES_H
++#define CALL_CENTER	0
++#define CATALOG_PAGE	1
++#define CATALOG_RETURNS	2
++#define CATALOG_SALES	3
++#define CUSTOMER	4
++#define CUSTOMER_ADDRESS	5
++#define CUSTOMER_DEMOGRAPHICS	6
++#define DATE	7
++#define HOUSEHOLD_DEMOGRAPHICS	8
++#define INCOME_BAND	9
++#define INVENTORY	10
++#define ITEM	11
++#define PROMOTION	12
++#define REASON	13
++#define SHIP_MODE	14
++#define STORE	15
++#define STORE_RETURNS	16
++#define STORE_SALES	17
++#define TIME	18
++#define WAREHOUSE	19
++#define WEB_PAGE	20
++#define WEB_RETURNS	21
++#define WEB_SALES	22
++#define WEB_SITE	23
++#define DBGEN_VERSION	24
++#define S_BRAND	25
++#define S_CUSTOMER_ADDRESS	26
++#define S_CALL_CENTER	27
++#define S_CATALOG	28
++#define S_CATALOG_ORDER	29
++#define S_CATALOG_ORDER_LINEITEM	30
++#define S_CATALOG_PAGE	31
++#define S_CATALOG_PROMOTIONAL_ITEM	32
++#define S_CATALOG_RETURNS	33
++#define S_CATEGORY	34
++#define S_CLASS	35
++#define S_COMPANY	36
++#define S_CUSTOMER	37
++#define S_DIVISION	38
++#define S_INVENTORY	39
++#define S_ITEM	40
++#define S_MANAGER	41
++#define S_MANUFACTURER	42
++#define S_MARKET	43
++#define S_PRODUCT	44
++#define S_PROMOTION	45
++#define S_PURCHASE	46
++#define S_PURCHASE_LINEITEM	47
++#define S_REASON	48
++#define S_STORE	49
++#define S_STORE_PROMOTIONAL_ITEM	50
++#define S_STORE_RETURNS	51
++#define S_SUBCATEGORY	52
++#define S_SUBCLASS	53
++#define S_WAREHOUSE	54
++#define S_WEB_ORDER	55
++#define S_WEB_ORDER_LINEITEM	56
++#define S_WEB_PAGE	57
++#define S_WEB_PROMOTIONAL_ITEM	58
++#define S_WEB_RETURNS	59
++#define S_WEB_SITE	60
++#define S_ZIPG	61
++#define PSEUDO_TABLE_START	62
++/* PSEUDO TABLES from here on; used in hierarchies */
++#define ITEM_BRAND	62
++#define ITEM_CLASS	63
++#define ITEM_CATEGORY	64
++#define DIVISIONS	65
++#define COMPANY	66
++#define CONCURRENT_WEB_SITES	67
++#define ACTIVE_CITIES	68
++#define ACTIVE_COUNTIES	69
++#define ACTIVE_STATES	70
++#define MAX_TABLE	70
++#endif
+diff -Naur v2.10.1rc3-orig/tools/tokenizer.l v2.10.1rc3/tools/tokenizer.l
+--- v2.10.1rc3-orig/tools/tokenizer.l	2019-02-19 21:55:37.000000000 +0200
++++ v2.10.1rc3/tools/tokenizer.l	2019-02-19 22:14:05.000000000 +0200
+@@ -47,7 +47,9 @@
+ #else
+ #include <strings.h>
+ #endif
++#ifndef OSX
+ #include <malloc.h>
++#endif
+ #include "keywords.h"
+ #include "StringBuffer.h"
+ #include "expr.h"
