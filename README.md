@@ -14,3 +14,25 @@ To build then run:
 cd tools
 make -f Makefile.spec
 ```
+
+To generate some data:
+```
+./dsdgen -scale 1 -dir /tmp/testdata
+```
+
+To load data into mysql (modify your loaddata script and mysql user to match your situation):
+
+```
+#create the database
+mysql -u root -e "create database tpcds"
+#load the schema first
+mysql -u root -Dtpcds < tpcds.sql
+sh loaddata-mysql.sh
+```
+
+To load data into postgresql
+```
+createdb tpcds
+psql tpcds -f tpcds.sql
+sh loaddata-psql.sh
+```
