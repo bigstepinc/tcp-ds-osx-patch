@@ -8,3 +8,9 @@ $ cd v2.10.1rc3
 $ patch -p1 < ../tcp-ds-2.0.osx.patch
 
 ```
+
+To build then run:
+```
+cd tools
+make -f Makefile.spec
+```
